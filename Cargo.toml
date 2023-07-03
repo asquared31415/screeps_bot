@@ -1,0 +1,26 @@
+[package]
+name = "screeps_bot_v3"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+screeps-game-api = { git = "https://github.com/rustyscreeps/screeps-game-api.git", features = [
+    "generate-pixel",
+] }
+wasm-bindgen = "0.2.84"
+js-sys = "0.3.61"
+web-sys = { version = "0.3.61", features = ["console"] }
+log = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0.159", features = ["derive"] }
+serde_json = "1.0.95"
+serde-wasm-bindgen = "0.5.0"
+parking_lot = "0.12.1"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# workaround to https://github.com/rustyscreeps/screeps-game-api/issues/391
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-O4", "--disable-sign-ext"]
