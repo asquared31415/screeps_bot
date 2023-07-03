@@ -3,10 +3,11 @@
 use crate::stats::{GlobalStats, TickStats};
 use crate::visualization::UiVisualizer;
 use core::cell::RefCell;
+use core::num::NonZeroU32;
 use core::sync::atomic::{AtomicU32, Ordering};
 use js_sys::Date;
 use log::*;
-use screeps::game;
+use screeps::{game, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
 
 mod logging;
@@ -30,7 +31,7 @@ pub fn init() {
 }
 
 // keep the last DATA_TIME ticks in global stats
-const DATA_TIME: u32 = 128;
+const DATA_TIME: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(128) };
 thread_local! {
     static STATS: RefCell<GlobalStats> = RefCell::new(GlobalStats::new(DATA_TIME));
 }
@@ -41,18 +42,46 @@ pub fn game_loop() {
     let bucket = game::cpu::bucket();
     info!("Starting game tick {} with {} bucket", tick, bucket);
 
-    if bucket >= 10_000 {
+    if try_generate_pixel() {
+        info!("Generated a pixel! Skipping this tick");
+        process_stats(tick);
+        return;
+    }
+
+    process_stats(tick);
+    // get CPU again to count the time spent drawing stats
+    info!("Ending tick {}: {:.3} CPU", tick, game::cpu::get_used());
+}
+
+fn try_generate_pixel() -> bool {
+    #[cfg(feature = "pixels")]
+    fn generate() -> bool {
         // generate a pixel and skip this tick
         match game::cpu::generate_pixel() {
-            Ok(()) => {
-                return;
-            }
+            Ok(()) => true,
             Err(_) => {
                 warn!("We had at least 10_000 bucket, but the game claimed there wasn't enough");
+                false
             }
         }
     }
 
+    #[cfg(not(feature = "pixels"))]
+    fn generate() -> bool {
+        debug!("could generate a pixel but pixels not enabled");
+        false
+    }
+
+    let bucket = game::cpu::bucket();
+    // Don't try to run the pixel
+    if bucket >= PIXEL_CPU_COST as i32 {
+        generate()
+    } else {
+        false
+    }
+}
+
+fn process_stats(tick: u32) {
     let cpu_usage_before_stats = game::cpu::get_used();
 
     // Handle stats
@@ -72,7 +101,4 @@ pub fn game_loop() {
             visualizer.draw_stats(stats);
         }
     });
-
-    // get CPU again to count the time spent drawing stats
-    info!("Ending tick {}: {:.3} CPU", tick, game::cpu::get_used());
 }

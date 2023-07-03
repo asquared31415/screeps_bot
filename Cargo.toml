@@ -6,9 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-screeps-game-api = { git = "https://github.com/rustyscreeps/screeps-game-api.git", features = [
-    "generate-pixel",
-] }
+screeps-game-api = { git = "https://github.com/rustyscreeps/screeps-game-api.git" }
 wasm-bindgen = "0.2.84"
 js-sys = "0.3.61"
 web-sys = { version = "0.3.61", features = ["console"] }
@@ -24,3 +22,6 @@ crate-type = ["cdylib", "rlib"]
 # workaround to https://github.com/rustyscreeps/screeps-game-api/issues/391
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-O4", "--disable-sign-ext"]
+
+[features]
+pixels = ["screeps-game-api/generate-pixel"]
