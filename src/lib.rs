@@ -1,4 +1,4 @@
-#![feature(int_roundings, local_key_cell_methods)]
+#![feature(int_roundings, local_key_cell_methods, lazy_cell)]
 
 use crate::stats::{GlobalStats, TickStats};
 use crate::visualization::UiVisualizer;
@@ -10,6 +10,7 @@ use log::*;
 use screeps::{game, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
 
+mod client_hacks;
 mod logging;
 mod stats;
 mod visualization;
@@ -47,6 +48,9 @@ pub fn game_loop() {
         process_stats(tick);
         return;
     }
+
+    // injects the various client hacks
+    client_hacks::inject_all();
 
     process_stats(tick);
     // get CPU again to count the time spent drawing stats
