@@ -94,11 +94,8 @@ fn process_stats(tick: u32) {
             stats.push_tick_data(tick_stats);
         }
 
-        for room in game::rooms().values() {
-            let room = room.name();
-            debug!("Drawing UI stats in room {}", room);
-            let mut visualizer = UiVisualizer::new(room);
-            visualizer.draw_stats(stats);
-        }
+        debug!("Drawing UI stats");
+        let mut visualizer = UiVisualizer::new(None);
+        visualizer.draw_stats(stats);
     });
 }

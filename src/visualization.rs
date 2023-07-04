@@ -3,16 +3,17 @@ use log::{debug, info, trace};
 use screeps::{game, RoomName, RoomVisual, TextAlign, TextStyle, CPU_BUCKET_MAX};
 
 pub struct UiVisualizer {
-    room: RoomName,
+    room: Option<RoomName>,
     visual: RoomVisual,
     line: u32,
 }
 
 impl UiVisualizer {
-    pub fn new(room: RoomName) -> Self {
+    /// Create a visualizer for the specified room, or use all rooms if not specified
+    pub fn new(room: Option<RoomName>) -> Self {
         Self {
             room,
-            visual: RoomVisual::new(Some(room)),
+            visual: RoomVisual::new(room),
             line: 0,
         }
     }
@@ -61,11 +62,7 @@ impl UiVisualizer {
         );
 
         let end_cpu = game::cpu::get_used();
-        info!(
-            "Used {:>1.3}cpu to show stats in {}",
-            end_cpu - start_cpu,
-            self.room
-        );
+        info!("Used {:>1.3}cpu for visualizer UI", end_cpu - start_cpu,);
     }
 
     fn draw_cpu(&mut self, cpu_usage: f64, cpu_limit: u32, style: Option<TextStyle>) {
