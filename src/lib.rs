@@ -1,4 +1,4 @@
-#![feature(int_roundings, local_key_cell_methods, lazy_cell)]
+#![feature(int_roundings, local_key_cell_methods, lazy_cell, const_option)]
 
 use crate::stats::{GlobalStats, TickStats};
 use crate::visualization::UiVisualizer;
@@ -32,7 +32,7 @@ pub fn init() {
 }
 
 // keep the last DATA_TIME ticks in global stats
-const DATA_TIME: NonZeroU32 = unsafe { NonZeroU32::new_unchecked(128) };
+const DATA_TIME: NonZeroU32 = NonZeroU32::new(128).expect("DATA_TIME is non-zero");
 thread_local! {
     static STATS: RefCell<GlobalStats> = RefCell::new(GlobalStats::new(DATA_TIME));
 }
