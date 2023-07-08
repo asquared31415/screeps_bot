@@ -40,5 +40,7 @@ module.exports.loop = function () {
         if (e.stack) {
             console.log(e.stack);
         }
+        // reset everything
+        wasm_module = null;
     }
 }
