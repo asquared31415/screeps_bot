@@ -11,8 +11,10 @@ use screeps::{game, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
 
 mod client_hacks;
+mod inventory;
 mod logging;
 mod stats;
+mod task;
 mod visualization;
 
 static INIT_TICK: AtomicU32 = AtomicU32::new(0);
