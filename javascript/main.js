@@ -1,8 +1,23 @@
 const MODULE_NAME = "screeps_bot_v3";
 
+// Set to true to have JS call Game.cpu.halt() on the next tick it processes.
+// This is used so that console output from the end of the erroring tick
+// will still be emitted, since calling halt destroys the environment instantly.
+// The environment will be re-created with a fresh heap next tick automatically.
+// We lose a tick of processing here, but it should be exceptional that code
+// throws at all.
+let halt_next_tick = false;
+
 let wasm_module;
 module.exports.loop = function () {
     try {
+        if (halt_next_tick) {
+            // We encountered an error, skip execution in this tick and get
+            // a new environment next tick.
+            Game.cpu.halt();
+            return;
+        }
+
         if (wasm_module) {
             wasm_module.game_loop();
         } else {
@@ -36,11 +51,16 @@ module.exports.loop = function () {
             }
         }
     } catch (e) {
-        console.log(e);
-        if (e.stack) {
-            console.log(e.stack);
+        if (e instanceof WebAssembly.CompileError || e instanceof WebAssembly.LinkError) {
+            console.log(`[JS] exception during wasm creation: ${e}`);
+        } else if (e instanceof WebAssembly.RuntimeError) {
+            console.log(`[JS] wasm aborted`);
+        } else {
+            console.log(`[JS] unexpected exception: ${e.stack}`);
         }
+        console.log(`[JS] destroying environment...`);
+
         // reset everything
-        wasm_module = null;
+        halt_next_tick = true;
     }
 }

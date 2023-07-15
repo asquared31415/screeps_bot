@@ -20,9 +20,17 @@ regex = "1.8.4"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-# workaround to https://github.com/rustyscreeps/screeps-game-api/issues/391
+[profile.release]
+panic = "abort"
+opt-level = 3
+lto = true
+
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-O4", "--disable-sign-ext"]
+# wasm-opt = false
+# -g - leave debug info in place, allowing for more descriptive stack traces on panic
+# --disable-sign-ext - prevents opcodes that the screeps servers can't load (see 
+# https://github.com/rustyscreeps/screeps-game-api/issues/391)
+wasm-opt = ["-g", "--disable-sign-ext"]
 
 [features]
 pixels = ["screeps-game-api/generate-pixel"]
