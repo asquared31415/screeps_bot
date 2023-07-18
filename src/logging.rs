@@ -5,8 +5,6 @@ use std::fmt::Write;
 use std::panic;
 use web_sys::console as js_console;
 
-use crate::stats;
-
 const TRACE_COLOR: &str = "#999999";
 const DEBUG_COLOR: &str = "#008c96";
 const INFO_COLOR: &str = "#dddddd";
@@ -24,26 +22,30 @@ impl Log for JsLogger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
+            let s = record.args().to_string();
+            // Escape < and > in code that we log.
+            // This should never be used to log html anyway, so protect that.
+            let sanitized = s.replace("<", "&lt;").replace(">", "&gt;");
             match record.level() {
                 log::Level::Trace => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{TRACE_COLOR}\">[TRACE] {}</span>",
-                    record.args()
+                    sanitized
                 ))),
                 log::Level::Debug => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{DEBUG_COLOR}\">[DEBUG] {}</style>",
-                    record.args()
+                    sanitized
                 ))),
                 log::Level::Info => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{INFO_COLOR}\">[INFO] {}",
-                    record.args()
+                    sanitized
                 ))),
                 log::Level::Warn => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{WARN_COLOR};background-color:{WARN_BG_COLOR}\">⚠️ [WARN] {}</span>",
-                    record.args()
+                    sanitized
                 ))),
                 log::Level::Error => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{ERR_COLOR};background-color:{ERR_BG_COLOR}\">⛔ [ERROR] {}</span>",
-                    record.args()
+                    sanitized
                 ))),
             }
         }

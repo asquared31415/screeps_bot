@@ -1,3 +1,5 @@
+require("hacks_ui");
+
 const MODULE_NAME = "screeps_bot_v3";
 
 // Set to true to have JS call Game.cpu.halt() on the next tick it processes.

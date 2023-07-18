@@ -10,7 +10,6 @@ use log::*;
 use screeps::{game, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
 
-mod client_hacks;
 mod inventory;
 mod logging;
 mod stats;
@@ -50,9 +49,6 @@ pub fn game_loop() {
         process_stats(tick);
         return;
     }
-
-    // injects the various client hacks
-    client_hacks::inject_all();
 
     process_stats(tick);
     // get CPU again to count the time spent drawing stats
