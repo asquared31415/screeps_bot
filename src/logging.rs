@@ -22,10 +22,9 @@ impl Log for JsLogger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let s = record.args().to_string();
-            // Escape < and > in code that we log.
-            // This should never be used to log html anyway, so protect that.
-            let sanitized = s.replace("<", "&lt;").replace(">", "&gt;");
+            // the log methods should never be used to output HTML, so escape everything here
+            let unescaped = record.args().to_string();
+            let sanitized = html_escape::encode_safe(unescaped.as_str());
             match record.level() {
                 log::Level::Trace => js_console::log_1(&JsString::from(format!(
                     "<span style=\"color:{TRACE_COLOR}\">[TRACE] {}</span>",
