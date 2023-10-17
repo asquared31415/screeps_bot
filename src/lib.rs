@@ -1,4 +1,4 @@
-#![feature(int_roundings, local_key_cell_methods, lazy_cell, const_option)]
+#![feature(int_roundings, lazy_cell, const_option)]
 
 use crate::stats::{GlobalStats, TickStats};
 use crate::visualization::UiVisualizer;
