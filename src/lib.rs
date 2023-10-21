@@ -27,15 +27,16 @@ pub fn init() {
     let tick = game::time();
     INIT_TICK.store(tick, Ordering::Relaxed);
 
+    // STATS should never be borrowed on init, so this should not panic.
+    STATS.set(Some(GlobalStats::new(tick)));
+
     // memory::MEM.with_borrow(|mem| {
     //     tasks::init(mem);
     // });
 }
 
-// keep the last DATA_TIME ticks in global stats
-const DATA_TIME: NonZeroU32 = NonZeroU32::new(128).expect("DATA_TIME is non-zero");
 thread_local! {
-    static STATS: RefCell<GlobalStats> = RefCell::new(GlobalStats::new(DATA_TIME));
+    static STATS: RefCell<Option<GlobalStats>> = RefCell::new(None);
 }
 
 #[wasm_bindgen]
@@ -88,16 +89,19 @@ fn process_stats(tick: u32) {
 
     // Handle stats
     STATS.with_borrow_mut(|stats| {
+        // Stats should always be initialized by this point.
+        let stats = stats.as_mut().unwrap();
+
         if tick == INIT_TICK.load(Ordering::Relaxed) {
             info!("Not updating stats for initial tick {}", tick);
         } else {
-            let tick_stats = TickStats::new(tick, Date::new_0(), cpu_usage_before_stats);
+            let tick_stats = TickStats::new(tick, Date::new_0().value_of(), cpu_usage_before_stats);
 
             stats.push_tick_data(tick_stats);
         }
 
         debug!("Drawing UI stats");
         let mut visualizer = UiVisualizer::new(None);
-        visualizer.draw_stats(stats);
+        visualizer.draw_stats(&stats);
     });
 }

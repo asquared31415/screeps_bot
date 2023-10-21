@@ -1,29 +1,32 @@
-use core::num::NonZeroU32;
-use js_sys::Date;
 use std::collections::VecDeque;
 
-pub struct GlobalStats {
-    /// The maximum number of ticks that this should store data for.
-    /// There will actually be `min(data_length, (now - start_time))` entries stored at any time.
-    data_length: NonZeroU32,
+/// The maximum number of ticks to store data for.
+/// There will actually be `min(data_length, (now - start_time))` entries stored at any time.
+const STORAGE_TIME: usize = 32_usize;
 
+pub struct GlobalStats {
+    /// The Game.time in which the bot was initialized.
+    global_start: u32,
+
+    /// The stored data for each tick.
     data: VecDeque<TickStats>,
+
     /// An optimization to calculate the sum of the used CPU without needing to loop over it all.
     sum_cpu_usage: f64,
 }
 
 impl GlobalStats {
-    pub fn new(data_length: NonZeroU32) -> Self {
+    pub fn new(global_start: u32) -> Self {
         Self {
-            data_length,
-            data: VecDeque::with_capacity(usize::try_from(data_length.get()).unwrap()),
+            global_start,
+            data: VecDeque::with_capacity(STORAGE_TIME),
             sum_cpu_usage: 0_f64,
         }
     }
 
     pub fn push_tick_data(&mut self, stats: TickStats) {
         // Remove the oldest entry if adding the current entry would be too much.
-        if self.data.len() as u32 >= self.data_length.get() {
+        if self.data.len() >= STORAGE_TIME {
             if let Some(oldest) = self.data.pop_front() {
                 self.sum_cpu_usage -= oldest.cpu();
             }
@@ -37,7 +40,11 @@ impl GlobalStats {
         self.data.len() as u32
     }
 
-    pub fn get_total_cpu(&self) -> f64 {
+    pub fn global_start(&self) -> u32 {
+        self.global_start
+    }
+
+    pub fn total_cpu(&self) -> f64 {
         self.sum_cpu_usage
     }
 
@@ -53,12 +60,13 @@ impl GlobalStats {
 #[derive(Debug)]
 pub struct TickStats {
     tick: u32,
-    real_time: Date,
+    /// Time in milliseconds since unix epoch.
+    real_time: f64,
     cpu_usage: f64,
 }
 
 impl TickStats {
-    pub fn new(tick: u32, real_time: Date, cpu_usage: f64) -> Self {
+    pub fn new(tick: u32, real_time: f64, cpu_usage: f64) -> Self {
         Self {
             tick,
             real_time,
@@ -70,8 +78,8 @@ impl TickStats {
         self.tick
     }
 
-    pub fn real_time(&self) -> &Date {
-        &self.real_time
+    pub fn real_time(&self) -> f64 {
+        self.real_time
     }
 
     pub fn cpu(&self) -> f64 {

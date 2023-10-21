@@ -36,19 +36,21 @@ impl UiVisualizer {
         }
 
         // check above ensures that there's at least one tick
-        let start_millis = stats.get(0).unwrap().real_time().value_of();
-        let end_millis = stats.get(num_ticks - 1).unwrap().real_time().value_of();
+        let start_millis = stats.get(0).unwrap().real_time();
+        let end_millis = stats.get(num_ticks - 1).unwrap().real_time();
         let avg_tick_time = (end_millis - start_millis) / f64::from(num_ticks) / 1000.0;
 
-        let cpu_sum = stats
-            .iter()
-            .fold(0_f64, |cpu_accum, stats| cpu_accum + stats.cpu());
-        let cpu_usage = cpu_sum / f64::from(num_ticks);
-        let cpu_limit = game::cpu::limit();
-
         self.draw_line(format!("tick: {}", game::time()), style.clone());
+        self.draw_line(
+            format!("global reset at {}", stats.global_start()),
+            style.clone(),
+        );
+
+        self.draw_line(format!("{} ticks of data", num_ticks), style.clone());
         self.draw_line(format!("time: {:.3}s", avg_tick_time), style.clone());
 
+        let cpu_usage = stats.total_cpu() / f64::from(num_ticks);
+        let cpu_limit = game::cpu::limit();
         self.draw_cpu(cpu_usage, cpu_limit, style.clone());
 
         let heap_stats = game::cpu::get_heap_statistics();
