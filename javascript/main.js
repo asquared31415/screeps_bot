@@ -41,6 +41,15 @@ module.exports.loop = function () {
             return;
         }
 
+        // need to freshly override the fake console object each tick
+        console.error = console_error;
+
+        // Don't let the game interfere with our memory or incur parsing, but let it work for moveTo and friends.
+        // This causes the game's view of Memory to effectively be tied to global instead, much like memhack.
+        delete global.Memory;
+        global.TempMemory = global.TempMemory || Object.create(null);
+        global.Memory = global.TempMemory;
+
         if (wasm_module) {
             wasm_module.game_loop();
         } else {
