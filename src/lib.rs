@@ -3,7 +3,6 @@
 use crate::stats::{GlobalStats, TickStats};
 use crate::visualization::UiVisualizer;
 use core::cell::RefCell;
-use core::num::NonZeroU32;
 use core::sync::atomic::{AtomicU32, Ordering};
 use js_sys::Date;
 use log::*;
@@ -71,7 +70,7 @@ fn try_generate_pixel() -> bool {
 
     #[cfg(not(feature = "pixels"))]
     fn generate() -> bool {
-        debug!("could generate a pixel but pixels not enabled");
+        trace!("could generate a pixel but pixels not enabled");
         false
     }
 
@@ -85,20 +84,19 @@ fn try_generate_pixel() -> bool {
 }
 
 fn process_stats(tick: u32) {
-    let cpu_usage_before_stats = game::cpu::get_used();
+    if tick == INIT_TICK.load(Ordering::Relaxed) {
+        info!("Not updating stats for initial tick {}", tick);
+        return;
+    }
 
-    // Handle stats
+    let cpu_usage_before_stats = game::cpu::get_used();
     STATS.with_borrow_mut(|stats| {
         // Stats should always be initialized by this point.
         let stats = stats.as_mut().unwrap();
 
-        if tick == INIT_TICK.load(Ordering::Relaxed) {
-            info!("Not updating stats for initial tick {}", tick);
-        } else {
-            let tick_stats = TickStats::new(tick, Date::new_0().value_of(), cpu_usage_before_stats);
+        let tick_stats = TickStats::new(tick, Date::new_0().value_of(), cpu_usage_before_stats);
 
-            stats.push_tick_data(tick_stats);
-        }
+        stats.push_tick_data(tick_stats);
 
         debug!("Drawing UI stats");
         let mut visualizer = UiVisualizer::new(None);
