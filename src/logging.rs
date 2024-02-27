@@ -1,8 +1,7 @@
 use core::panic::PanicInfo;
 use js_sys::JsString;
-use log::{error, Log};
-use std::fmt::Write;
-use std::panic;
+use log::{error, LevelFilter, Log};
+use std::{fmt::Write, panic};
 use web_sys::console as js_console;
 
 const TRACE_COLOR: &str = "#999999";
@@ -53,9 +52,9 @@ impl Log for JsLogger {
     fn flush(&self) {}
 }
 
-pub fn setup_logger() {
+pub fn setup_logger(level: LevelFilter) {
     log::set_logger(&JsLogger).unwrap();
-    log::set_max_level(log::LevelFilter::Debug);
+    log::set_max_level(level);
 
     panic::set_hook(Box::new(panic_hook));
 }

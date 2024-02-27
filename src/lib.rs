@@ -1,13 +1,21 @@
 #![feature(int_roundings, lazy_cell, const_option)]
 
-use crate::stats::{GlobalStats, TickStats};
-use crate::visualization::UiVisualizer;
-use core::cell::RefCell;
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::{
+    cell::RefCell,
+    sync::atomic::{AtomicU32, Ordering},
+};
+use std::collections::HashMap;
+
 use js_sys::Date;
 use log::*;
-use screeps::{game, PIXEL_CPU_COST};
+use screeps::{game, RoomName, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
+
+use crate::{
+    inventory::RoomInventory,
+    stats::{GlobalStats, TickStats},
+    visualization::UiVisualizer,
+};
 
 mod inventory;
 mod logging;
@@ -19,7 +27,7 @@ static INIT_TICK: AtomicU32 = AtomicU32::new(0);
 
 #[wasm_bindgen]
 pub fn init() {
-    logging::setup_logger();
+    logging::setup_logger(LevelFilter::Debug);
     info!("Initializing...");
 
     // store the init tick so that it can be skipped in stats
@@ -38,6 +46,15 @@ thread_local! {
     static STATS: RefCell<Option<GlobalStats>> = RefCell::new(None);
 }
 
+#[derive(Debug)]
+struct GlobalState {
+    inventory: HashMap<RoomName, RoomInventory>,
+}
+
+thread_local! {
+    static STATE: RefCell<GlobalState> = RefCell::new(GlobalState {inventory: HashMap::new()});
+}
+
 #[wasm_bindgen]
 pub fn game_loop() {
     let tick = game::time();
@@ -49,6 +66,17 @@ pub fn game_loop() {
         process_stats(tick);
         return;
     }
+
+    STATE.with_borrow_mut(|state| {
+        for room in game::rooms().values() {
+            let name = room.name();
+            let inventory = state
+                .inventory
+                .entry(name)
+                .or_insert_with(|| RoomInventory::new());
+            inventory.update_targets(&room);
+        }
+    });
 
     process_stats(tick);
     // get CPU again to count the time spent drawing stats

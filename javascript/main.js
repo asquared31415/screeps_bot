@@ -18,7 +18,7 @@ function console_error() {
             return arg;
         }
     }).join(' ');
-    console.log("ERROR:", processedArgs);
+    console.log("[JS] ERROR:", processedArgs);
     Game.notify(processedArgs);
 }
 
@@ -44,8 +44,9 @@ module.exports.loop = function () {
         // need to freshly override the fake console object each tick
         console.error = console_error;
 
-        // Don't let the game interfere with our memory or incur parsing, but let it work for moveTo and friends.
-        // This causes the game's view of Memory to effectively be tied to global instead, much like memhack.
+        // Decouple `Memory` from `RawMemory`, but give it `TempMemory` to persist to so that
+        // `moveTo` can cache. This avoids issues where the game tries to insert data into `Memory`
+        // that is not expected.
         delete global.Memory;
         global.TempMemory = global.TempMemory || Object.create(null);
         global.Memory = global.TempMemory;
