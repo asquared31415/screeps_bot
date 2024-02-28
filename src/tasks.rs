@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::{debug, trace, warn};
 use screeps::{
-    find, game, Creep, HasId, MaybeHasId, ObjectId, Part, RawObjectId, SharedCreepProperties,
+    find, game, Creep, HasId, MaybeHasId, ObjectId, Part, RawObjectId, Room, SharedCreepProperties,
     Source,
 };
 
@@ -73,46 +73,58 @@ pub fn process_tasks(state: &mut GlobalState) {
         let id = creep
             .try_id()
             .expect("creeps that have been spawned should have an id");
-        if let Some(task) = tasks.tasks.get_mut(&id) {
-            debug!("executing task {:?} for {}", task, creep.name());
-            match task.execute(inventory, &creep) {
-                TaskResult::Complete | TaskResult::Error => {
-                    tasks.tasks.remove(&id);
-                }
-                TaskResult::InProgress => {}
-            }
+        if tasks.tasks.contains_key(&id) {
+            execute_task_common(tasks, id, inventory);
         } else {
             debug!("reassigning task for {}", creep.name());
             // reassign task based on what creep would be most suited for
-            for body_part in creep.body() {
-                let part = body_part.part();
-                match part {
-                    // creeps that can work should be harvesters
-                    Part::Work => {
-                        let sources = room.find(find::SOURCES, None);
-                        let Some(source) = sources.first() else {
-                            // maybe the creep can do something else
-                            continue;
-                        };
-                        let task = Task::DropHarvest(source.id());
-                        tasks.tasks.insert(id, task);
-                    }
-                    // creeps that can carry should be haulers
-                    Part::Carry => {
-                        let Some((reservation, target)) = haul::find_target(inventory, &room)
-                        else {
-                            continue;
-                        };
-                        let task = Task::Haul(HaulState::Gathering, reservation, target);
-                        tasks.tasks.insert(id, task);
-                    }
-                    _ => {}
-                }
+            if let Some(task) = find_best_task(&creep, &room, inventory) {
+                debug!("creep {}: {:?}", creep.name(), task);
+                tasks.tasks.insert(id, task);
+                execute_task_common(tasks, id, inventory);
+            } else {
+                debug!("creep {} not assigned a task", creep.name());
             }
-
-            let task = tasks.tasks.get(&id);
-            debug!("creep {}: {:?}", creep.name(), task);
-            // TODO: maybe execute task on first tick?
         }
     }
+}
+
+/// INVARIANT: `id` must correspond to a creep that exists and it must have a task in `tasks`
+fn execute_task_common(tasks: &mut RoomTasks, id: ObjectId<Creep>, inventory: &mut RoomInventory) {
+    let creep = id.resolve().unwrap();
+    let task = tasks.tasks.get_mut(&id).unwrap();
+    debug!("executing task {:?} for {}", task, creep.name());
+    match task.execute(inventory, &creep) {
+        TaskResult::Complete | TaskResult::Error => {
+            tasks.tasks.remove(&id);
+        }
+        TaskResult::InProgress => {}
+    }
+}
+
+fn find_best_task(creep: &Creep, room: &Room, inventory: &mut RoomInventory) -> Option<Task> {
+    let mut task = None;
+    for body_part in creep.body() {
+        let part = body_part.part();
+        match part {
+            // creeps that can work should be harvesters
+            Part::Work => {
+                let sources = room.find(find::SOURCES, None);
+                let Some(source) = sources.first() else {
+                    // maybe the creep can do something else
+                    continue;
+                };
+                task = Some(Task::DropHarvest(source.id()));
+            }
+            // creeps that can carry should be haulers
+            Part::Carry => {
+                let Some((reservation, target)) = haul::find_target(inventory, &room) else {
+                    break;
+                };
+                task = Some(Task::Haul(HaulState::Gathering, reservation, target));
+            }
+            _ => {}
+        }
+    }
+    task
 }
