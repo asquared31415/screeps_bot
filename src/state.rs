@@ -17,19 +17,7 @@ pub struct RoomState {
 }
 
 #[derive(Debug, Default)]
-pub struct Memory {
-    pub creeps: HashMap<String, CreepMemory>,
-}
-
-#[derive(Debug)]
-pub struct CreepMemory {
-    pub task: TaskState,
-}
-
-#[derive(Debug)]
-pub enum TaskState {
-    Haul(HaulState),
-}
+pub struct Memory {}
 
 #[derive(Debug)]
 pub enum HaulState {
