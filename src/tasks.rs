@@ -26,7 +26,7 @@ pub enum Task {
 }
 
 impl Task {
-    fn execute(&mut self, inventory: &mut RoomInventory, creep: &Creep) {
+    fn execute(&mut self, inventory: &mut RoomInventory, creep: &Creep) -> TaskResult {
         match self {
             Task::DropHarvest(source_id) => drop_harvest::run(source_id, creep),
             Task::Haul(haul_state, reservation_id, target) => {
@@ -34,6 +34,16 @@ impl Task {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskResult {
+    // the task was completed, remove it from the task list
+    Complete,
+    // the task is still in progress
+    InProgress,
+    // the task was not able to complete, but cannot be continued
+    Error,
 }
 
 #[derive(Debug, Default)]
@@ -65,7 +75,12 @@ pub fn process_tasks(state: &mut GlobalState) {
             .expect("creeps that have been spawned should have an id");
         if let Some(task) = tasks.tasks.get_mut(&id) {
             debug!("executing task {:?} for {}", task, creep.name());
-            task.execute(inventory, &creep);
+            match task.execute(inventory, &creep) {
+                TaskResult::Complete | TaskResult::Error => {
+                    tasks.tasks.remove(&id);
+                }
+                TaskResult::InProgress => {}
+            }
         } else {
             debug!("reassigning task for {}", creep.name());
             // reassign task based on what creep would be most suited for

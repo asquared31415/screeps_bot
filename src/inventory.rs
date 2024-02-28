@@ -14,13 +14,6 @@ pub struct RoomInventory {
 }
 
 impl RoomInventory {
-    pub fn new() -> Self {
-        Self {
-            targets: HashMap::new(),
-            reservations: HashMap::new(),
-        }
-    }
-
     pub fn request(
         &mut self,
         kind: ResourceType,

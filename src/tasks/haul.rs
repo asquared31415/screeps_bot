@@ -8,6 +8,7 @@ use wasm_bindgen::JsValue;
 use crate::{
     inventory::{ReservationId, RoomInventory, Target},
     state::HaulState,
+    tasks::TaskResult,
     util::StructureExt,
 };
 
@@ -22,16 +23,19 @@ pub fn find_target(
     if let Some(target) = structures.first() {
         trace!("target: {:?}", target.structure_type());
         let resource_types = target.resource_types();
+        let amount = 50;
         let Some(reservation_id) = resource_types
             .iter()
-            .find_map(|&kind| inventory.request(kind, 50).ok())
+            .find_map(|&kind| inventory.request(kind, amount).ok())
         else {
-            warn!("unable to reserve resources for {:?}", target);
+            debug!(
+                "unable to reserve resources for {}",
+                target.structure_type()
+            );
             return None;
         };
 
-        let reservation = inventory.resolve_reservation(&reservation_id).unwrap();
-        debug!("got reservation {:?}: {:#?}", reservation_id, reservation);
+        debug!("got reservation {:?}", reservation_id);
 
         let id = RawObjectId::from(target.as_structure().id());
         Some((reservation_id, id))
@@ -47,9 +51,9 @@ pub fn run(
     creep: &Creep,
     reservation_id: &ReservationId,
     target: &RawObjectId,
-) {
+) -> TaskResult {
     let Some(reservation) = inventory.resolve_reservation(reservation_id) else {
-        return;
+        return TaskResult::Error;
     };
 
     match state {
@@ -61,14 +65,22 @@ pub fn run(
                     match creep.pickup(&resource) {
                         Ok(()) | Err(ErrorCode::Full) => {
                             *state = HaulState::Delivering;
+                            TaskResult::InProgress
                         }
                         Err(ErrorCode::InvalidTarget) => {
-                            warn!("target not valid (TODO: remove task)");
+                            warn!("target not valid");
+                            inventory.release(*reservation_id);
+                            TaskResult::Error
                         }
-                        Err(e) => warn!("unexpected error {:?}", e),
+                        Err(e) => {
+                            warn!("unexpected error {:?}", e);
+                            inventory.release(*reservation_id);
+                            TaskResult::Error
+                        }
                     }
                 } else {
                     let _ = creep.move_to(resource);
+                    TaskResult::InProgress
                 }
             }
             Target::Storage(id) => todo!(),
@@ -76,27 +88,37 @@ pub fn run(
         HaulState::Delivering => {
             let Some(target) = game::get_object_by_id_erased(target) else {
                 warn!("creep {} could no longer find {}", creep.name(), target);
-                return;
+                inventory.release(*reservation_id);
+                return TaskResult::Error;
             };
             let structure = StructureObject::from(JsValue::from(target));
             let Some(transferrable) = structure.as_transferable() else {
                 warn!("structure was not transferrable");
-                return;
+                inventory.release(*reservation_id);
+                return TaskResult::Error;
             };
 
             if creep.pos().is_near_to(structure.pos()) {
                 match creep.transfer(transferrable, reservation.resource_type(), None) {
                     Ok(()) => {
-                        // TODO: complete task
+                        inventory.release(*reservation_id);
+                        TaskResult::Complete
                     }
                     Err(ErrorCode::Full) => {
                         // TODO: handle this by returning resources somewhere maybe?
+                        inventory.release(*reservation_id);
+                        TaskResult::Error
                     }
-                    Err(e) => warn!("unexpected error {:?}", e),
+                    Err(e) => {
+                        warn!("unexpected error {:?}", e);
+                        inventory.release(*reservation_id);
+                        TaskResult::Error
+                    }
                 }
                 // TODO: if empty, exit
             } else {
                 let _ = creep.move_to(structure);
+                TaskResult::InProgress
             }
         }
     }
