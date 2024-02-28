@@ -5,7 +5,7 @@ use log::warn;
 use screeps::{find, HasId, ObjectId, Resource, ResourceType, Room, StructureStorage};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RoomInventory {
     /// all possible known targets that could serve a request
     targets: HashMap<Target, TargetInfo>,
@@ -129,6 +129,20 @@ pub struct Reservation {
     target: Target,
     kind: ResourceType,
     amount: u32,
+}
+
+impl Reservation {
+    pub fn target(&self) -> Target {
+        self.target
+    }
+
+    pub fn resource_type(&self) -> ResourceType {
+        self.kind
+    }
+
+    pub fn amount(&self) -> u32 {
+        self.amount
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

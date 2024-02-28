@@ -4,23 +4,24 @@ use core::{
     cell::RefCell,
     sync::atomic::{AtomicU32, Ordering},
 };
-use std::collections::HashMap;
 
 use js_sys::Date;
 use log::*;
-use screeps::{game, RoomName, PIXEL_CPU_COST};
+use screeps::{game, PIXEL_CPU_COST};
 use wasm_bindgen::prelude::*;
 
 use crate::{
-    inventory::RoomInventory,
+    state::{GlobalState, RoomState},
     stats::{GlobalStats, TickStats},
     visualization::UiVisualizer,
 };
 
 mod inventory;
 mod logging;
+mod state;
 mod stats;
-mod task;
+mod tasks;
+mod util;
 mod visualization;
 
 static INIT_TICK: AtomicU32 = AtomicU32::new(0);
@@ -46,13 +47,8 @@ thread_local! {
     static STATS: RefCell<Option<GlobalStats>> = RefCell::new(None);
 }
 
-#[derive(Debug)]
-struct GlobalState {
-    inventory: HashMap<RoomName, RoomInventory>,
-}
-
 thread_local! {
-    static STATE: RefCell<GlobalState> = RefCell::new(GlobalState {inventory: HashMap::new()});
+    static STATE: RefCell<GlobalState> = RefCell::new(GlobalState::default());
 }
 
 #[wasm_bindgen]
@@ -70,11 +66,14 @@ pub fn game_loop() {
     STATE.with_borrow_mut(|state| {
         for room in game::rooms().values() {
             let name = room.name();
-            let inventory = state
-                .inventory
+            let room_state = state
+                .room_state
                 .entry(name)
-                .or_insert_with(|| RoomInventory::new());
-            inventory.update_targets(&room);
+                .or_insert_with(|| RoomState::default());
+
+            room_state.inventory.update_targets(&room);
+
+            tasks::process_tasks(state);
         }
     });
 
