@@ -1,7 +1,7 @@
 use log::*;
 use screeps::{
-    find, game, prelude::HasId as _, Creep, ErrorCode, HasPosition, RawObjectId, Room,
-    SharedCreepProperties, StructureObject, StructureProperties, StructureType,
+    find, game, prelude::*, Creep, ErrorCode, RawObjectId, Room, StoreObject, StructureObject,
+    StructureType,
 };
 use wasm_bindgen::JsValue;
 
@@ -9,20 +9,28 @@ use crate::{
     inventory::{ReservationId, RoomInventory, Target},
     state::HaulState,
     tasks::TaskResult,
-    util::StructureExt,
 };
 
 pub fn find_target(
     inventory: &mut RoomInventory,
     room: &Room,
 ) -> Option<(ReservationId, RawObjectId)> {
-    let mut structures = room.find(find::MY_STRUCTURES, None);
-    structures.retain(|s| s.as_has_store().is_some());
-    structures.sort_by_key(|s| TargetSortOrder::from(s));
+    let structures = room.find(find::MY_STRUCTURES, None);
+    let mut structures = structures
+        .into_iter()
+        .filter_map(|s| {
+            let store_object = StoreObject::try_from(s.clone()).ok()?;
+            let resource_types = store_object.resource_types();
 
-    if let Some(target) = structures.first() {
-        trace!("target: {:?}", target.structure_type());
-        let resource_types = target.resource_types();
+            resource_types
+                .iter()
+                .any(|&ty| store_object.store().get_free_capacity(Some(ty)) > 0)
+                .then_some((s, resource_types))
+        })
+        .collect::<Vec<_>>();
+    structures.sort_by_key(|s| TargetSortOrder::from(&s.0));
+
+    if let Some((target, resource_types)) = structures.first() {
         let amount = 50;
         let Some(reservation_id) = resource_types
             .iter()
@@ -37,7 +45,7 @@ pub fn find_target(
 
         debug!("got reservation {:?}", reservation_id);
 
-        let id = RawObjectId::from(target.as_structure().id());
+        let id = target.as_structure().raw_id();
         Some((reservation_id, id))
     } else {
         warn!("no haul target found");
