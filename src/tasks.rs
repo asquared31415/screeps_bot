@@ -7,7 +7,7 @@ use screeps::{
 };
 
 use crate::{
-    inventory::{ReservationId, RoomInventory},
+    colony::{Inventory, ReservationId},
     state::HaulState,
     GlobalState,
 };
@@ -26,7 +26,7 @@ pub enum Task {
 }
 
 impl Task {
-    fn execute(&mut self, inventory: &mut RoomInventory, creep: &Creep) -> TaskResult {
+    fn execute(&mut self, inventory: &mut Inventory, creep: &Creep) -> TaskResult {
         match self {
             Task::DropHarvest(source_id) => drop_harvest::run(source_id, creep),
             Task::Haul(haul_state, reservation_id, target) => {
@@ -90,7 +90,7 @@ pub fn process_tasks(state: &mut GlobalState) {
 }
 
 /// INVARIANT: `id` must correspond to a creep that exists and it must have a task in `tasks`
-fn execute_task_common(tasks: &mut RoomTasks, id: ObjectId<Creep>, inventory: &mut RoomInventory) {
+fn execute_task_common(tasks: &mut RoomTasks, id: ObjectId<Creep>, inventory: &mut Inventory) {
     let creep = id.resolve().unwrap();
     let task = tasks.tasks.get_mut(&id).unwrap();
     debug!("executing task {:?} for {}", task, creep.name());
@@ -102,7 +102,7 @@ fn execute_task_common(tasks: &mut RoomTasks, id: ObjectId<Creep>, inventory: &m
     }
 }
 
-fn find_best_task(creep: &Creep, room: &Room, inventory: &mut RoomInventory) -> Option<Task> {
+fn find_best_task(creep: &Creep, room: &Room, inventory: &mut Inventory) -> Option<Task> {
     let mut task = None;
     for body_part in creep.body() {
         let part = body_part.part();

@@ -6,14 +6,14 @@ use screeps::{find, HasId, ObjectId, Resource, ResourceType, Room, StructureStor
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default)]
-pub struct RoomInventory {
+pub struct Inventory {
     /// all possible known targets that could serve a request
     targets: HashMap<Target, TargetInfo>,
     /// all the reservations that this inventory knows about
     reservations: HashMap<ReservationId, Reservation>,
 }
 
-impl RoomInventory {
+impl Inventory {
     pub fn request(
         &mut self,
         kind: ResourceType,

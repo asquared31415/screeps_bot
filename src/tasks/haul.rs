@@ -6,15 +6,12 @@ use screeps::{
 use wasm_bindgen::JsValue;
 
 use crate::{
-    inventory::{ReservationId, RoomInventory, Target},
+    colony::{Inventory, ReservationId, Target},
     state::HaulState,
     tasks::TaskResult,
 };
 
-pub fn find_target(
-    inventory: &mut RoomInventory,
-    room: &Room,
-) -> Option<(ReservationId, RawObjectId)> {
+pub fn find_target(inventory: &mut Inventory, room: &Room) -> Option<(ReservationId, RawObjectId)> {
     let structures = room.find(find::MY_STRUCTURES, None);
     let mut structures = structures
         .into_iter()
@@ -55,7 +52,7 @@ pub fn find_target(
 
 pub fn run(
     state: &mut HaulState,
-    inventory: &mut RoomInventory,
+    inventory: &mut Inventory,
     creep: &Creep,
     reservation_id: &ReservationId,
     target: &RawObjectId,

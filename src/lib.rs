@@ -16,7 +16,7 @@ use crate::{
     visualization::UiVisualizer,
 };
 
-mod inventory;
+mod colony;
 mod logging;
 mod state;
 mod stats;
@@ -74,6 +74,8 @@ pub fn game_loop() {
             room_state.inventory.update_targets(&room);
 
             tasks::process_tasks(state);
+
+            panic!("this is a panic");
         }
     });
 

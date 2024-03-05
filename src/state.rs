@@ -1,8 +1,10 @@
+use core::sync::atomic::AtomicU32;
 use std::collections::HashMap;
 
 use screeps::RoomName;
+use serde::{Deserialize, Serialize};
 
-use crate::{inventory::RoomInventory, tasks::RoomTasks};
+use crate::{colony::Inventory, tasks::RoomTasks};
 
 #[derive(Debug, Default)]
 pub struct GlobalState {
@@ -12,12 +14,14 @@ pub struct GlobalState {
 
 #[derive(Debug, Default)]
 pub struct RoomState {
-    pub inventory: RoomInventory,
+    pub inventory: Inventory,
     pub tasks: RoomTasks,
 }
 
-#[derive(Debug, Default)]
-pub struct Memory {}
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Memory {
+    pub next_colony_id: u32,
+}
 
 #[derive(Debug)]
 pub enum HaulState {
